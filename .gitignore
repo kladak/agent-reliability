@@ -9,7 +9,9 @@ dist/
 build/
 .venv/
 venv/
-reports/
+# Keep the pinned CI baseline; ignore ephemeral eval outputs.
+reports/*
+!reports/baseline-offline.json
 traces/
 *.jsonl
 .DS_Store

@@ -1,0 +1,90 @@
+{
+  "generated_at": "2026-09-13T22:55:21.329074+00:00",
+  "mode": "offline",
+  "task_count": 6,
+  "passed": 6,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "total_latency_ms": 0,
+  "results": [
+    {
+      "task_id": "T1_file_repair",
+      "passed": true,
+      "failure_class": null,
+      "outcome_failure_class": null,
+      "grade_message": "T1 passed",
+      "latency_ms": 0,
+      "tokens_in": 150,
+      "tokens_out": 75,
+      "cost_usd": 0.0,
+      "steps_completed": 3,
+      "model": "mock"
+    },
+    {
+      "task_id": "T2_api_reconcile",
+      "passed": true,
+      "failure_class": null,
+      "outcome_failure_class": null,
+      "grade_message": "T2 passed",
+      "latency_ms": 0,
+      "tokens_in": 150,
+      "tokens_out": 75,
+      "cost_usd": 0.0,
+      "steps_completed": 3,
+      "model": "mock"
+    },
+    {
+      "task_id": "T3_flaky_tool",
+      "passed": true,
+      "failure_class": null,
+      "outcome_failure_class": null,
+      "grade_message": "T3 passed",
+      "latency_ms": 0,
+      "tokens_in": 100,
+      "tokens_out": 50,
+      "cost_usd": 0.0,
+      "steps_completed": 2,
+      "model": "mock"
+    },
+    {
+      "task_id": "T4_partial_state",
+      "passed": true,
+      "failure_class": null,
+      "outcome_failure_class": null,
+      "grade_message": "T4 passed",
+      "latency_ms": 0,
+      "tokens_in": 150,
+      "tokens_out": 75,
+      "cost_usd": 0.0,
+      "steps_completed": 3,
+      "model": "mock"
+    },
+    {
+      "task_id": "T5_policy_refusal",
+      "passed": true,
+      "failure_class": null,
+      "outcome_failure_class": "policy_violation",
+      "grade_message": "T5 passed (correct refusal)",
+      "latency_ms": 0,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "cost_usd": 0.0,
+      "steps_completed": 1,
+      "model": "mock"
+    },
+    {
+      "task_id": "T6_cost_budget",
+      "passed": true,
+      "failure_class": null,
+      "outcome_failure_class": null,
+      "grade_message": "T6 passed",
+      "latency_ms": 0,
+      "tokens_in": 100,
+      "tokens_out": 50,
+      "cost_usd": 0.0015,
+      "steps_completed": 2,
+      "model": "mock"
+    }
+  ],
+  "notes": "Pinned offline baseline for CI --compare. latency_ms zeroed; regression gate uses pass/fail + failure_class + outcome_failure_class."
+}

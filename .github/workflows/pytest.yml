@@ -17,5 +17,7 @@ jobs:
         run: python -m pip install -e ".[dev]"
       - name: Run tests
         run: make test
-      - name: Offline eval smoke
+      - name: Offline eval
         run: python -m agent_reliability.eval.runner --offline --report reports/ci-offline.json
+      - name: Compare to pinned baseline
+        run: python -m agent_reliability.eval.runner --compare reports/baseline-offline.json reports/ci-offline.json
