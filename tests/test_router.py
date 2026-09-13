@@ -41,3 +41,13 @@ def test_flaky_echo_retries(tmp_path: Path) -> None:
     result = router.call("flaky_echo", {"message": "hi", "fail_times": 2})
     assert result.ok
     assert result.attempt == 3  # 2 failures + 1 success
+
+
+def test_http_mock_journal(tmp_path: Path) -> None:
+    from agent_reliability.tools import MockHttpTool
+
+    http = MockHttpTool({"/x": [1, 2]})
+    router = ToolRouter([http])
+    result = router.call("http_get", {"path": "/x"})
+    assert result.ok
+    assert http.journal == [{"method": "GET", "path": "/x"}]
