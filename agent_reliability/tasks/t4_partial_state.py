@@ -3,19 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from agent_reliability.observe.taxonomy import FailureClass
 from agent_reliability.observe.trace import EventType, read_trace
-from agent_reliability.runtime.mock_agent import (
-    MockAgentConfig,
-    MockAgentRuntime,
-    RunOutcome,
-    ToolPlanStep,
-)
-from agent_reliability.runtime.state_store import StateStore
+from agent_reliability.runtime.mock_agent import RunOutcome, ToolPlanStep
 from agent_reliability.tasks.base import BaseTask, GradeResult, TaskContext
-from agent_reliability.tools.filesystem import FsReadTool, FsWriteTool
-from agent_reliability.tools.router import ToolRouter
 
 
 class T4PartialState(BaseTask):
@@ -48,50 +41,31 @@ class T4PartialState(BaseTask):
             ),
         ]
 
-    def run_with_crash_and_resume(
+    def execute(
         self,
         ctx: TaskContext,
         *,
+        agent: Any,
+        plan: list[ToolPlanStep],
         trace_path: Path | None = None,
     ) -> RunOutcome:
-        """Helper used by eval/tests: crash after step 1, then resume."""
-        from agent_reliability.observe.trace import TraceSink
-
-        store = StateStore(ctx.workspace / "state")
-        plan = self.build_plan(ctx)
-        tools = [FsReadTool(ctx.workspace), FsWriteTool(ctx.workspace)]
-
         if trace_path is not None:
-            sink = TraceSink(trace_path)
             (ctx.workspace / ".trace_path").write_text(str(trace_path), encoding="utf-8")
-        else:
-            sink = None
 
-        try:
-            router = ToolRouter(tools, trace=sink, run_id=ctx.run_id)
-            agent = MockAgentRuntime(
-                router,
-                trace=sink,
-                config=MockAgentConfig(model="mock"),
-                state_store=store,
+        crashed = agent.run(plan, run_id=ctx.run_id, crash_after_step=1)
+        if not crashed.metadata.get("crashed"):
+            crashed.metadata["prior_crash"] = False
+            return crashed
+
+        outcome = agent.run(plan, run_id=ctx.run_id, resume=True)
+        outcome.metadata["prior_crash"] = True
+        store = agent.state_store
+        if store is not None:
+            ckpt = store.load(ctx.run_id)
+            outcome.metadata["checkpoint_after_resume"] = (
+                ckpt.model_dump() if ckpt else None
             )
-            crashed = agent.run(plan, run_id=ctx.run_id, crash_after_step=1)
-            assert crashed.metadata.get("crashed") is True
-            # Resume — same run_id, continue from checkpoint
-            outcome = agent.run(plan, run_id=ctx.run_id, resume=True)
-            outcome.metadata["prior_crash"] = True
-            outcome.metadata["checkpoint_after_crash"] = (
-                store.load(ctx.run_id).model_dump() if store.load(ctx.run_id) else None
-            )
-            return outcome
-        finally:
-            if sink is not None:
-                sink.close()
-
-
-    def execute(self, ctx: TaskContext, *, agent, plan, trace_path=None):
-        # Ignore the pre-built agent; we need state_store + crash/resume semantics.
-        return self.run_with_crash_and_resume(ctx, trace_path=trace_path)
+        return outcome
 
     def grade(self, ctx: TaskContext, outcome: RunOutcome) -> GradeResult:
         checks: list[dict] = []
@@ -106,12 +80,7 @@ class T4PartialState(BaseTask):
                 and final.read_text(encoding="utf-8") == self.FINAL_CONTENT,
             }
         )
-        checks.append(
-            {
-                "name": "run_ok_after_resume",
-                "passed": outcome.ok is True,
-            }
-        )
+        checks.append({"name": "run_ok_after_resume", "passed": outcome.ok is True})
         checks.append(
             {
                 "name": "resume_metadata",
@@ -120,7 +89,6 @@ class T4PartialState(BaseTask):
             }
         )
 
-        # Replay-friendly: if a trace path was attached on ctx via metadata file
         trace_hint = ctx.workspace / ".trace_path"
         if trace_hint.exists():
             events = read_trace(trace_hint.read_text().strip())
@@ -130,9 +98,7 @@ class T4PartialState(BaseTask):
                 if e.event_type == EventType.RUN_START
                 and (e.metadata or {}).get("resume") is True
             ]
-            checks.append(
-                {"name": "trace_shows_resume", "passed": len(resumes) >= 1}
-            )
+            checks.append({"name": "trace_shows_resume", "passed": len(resumes) >= 1})
 
         passed = all(c["passed"] for c in checks) and outcome.ok
         if not passed:
