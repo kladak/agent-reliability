@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from agent_reliability.observe.taxonomy import FailureClass
 from agent_reliability.observe.trace import EventType, TraceEvent, TraceSink
 from agent_reliability.runtime.policy import PolicyGate
-from agent_reliability.runtime.state_store import Checkpoint, StateStore
+from agent_reliability.runtime.state_store import Checkpoint, StateCorruptionError, StateStore
 from agent_reliability.tools.router import ToolRouter
 
 
@@ -46,6 +46,14 @@ class RunOutcome(BaseModel):
     cost_usd: float = 0.0
     tool_results: list[dict[str, Any]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class InjectedCrash(Exception):
+    """Stand-in for a mid-run process death after a checkpoint was saved.
+
+    T4 catches this and resumes from the state store — not a cooperative
+    RunOutcome return on the happy path.
+    """
 
 
 class MockAgentRuntime:
@@ -87,7 +95,20 @@ class MockAgentRuntime:
         resumed = False
 
         if resume and self.state_store is not None:
-            ckpt = self.state_store.load(rid)
+            try:
+                ckpt = self.state_store.load(rid)
+            except StateCorruptionError as exc:
+                outcome = RunOutcome(
+                    run_id=rid,
+                    ok=False,
+                    steps_completed=0,
+                    failure_class=FailureClass.STATE_CORRUPTION.value,
+                    error=str(exc),
+                    latency_ms=(time.perf_counter() - started) * 1000,
+                    metadata={"resume_attempted": True},
+                )
+                self._emit_end(rid, outcome)
+                return outcome
             if ckpt is None:
                 outcome = RunOutcome(
                     run_id=rid,
@@ -264,32 +285,21 @@ class MockAgentRuntime:
                 )
 
             if crash_after_step is not None and i >= crash_after_step:
-                outcome = RunOutcome(
-                    run_id=rid,
-                    ok=False,
-                    steps_completed=i,
-                    failure_class=FailureClass.UNKNOWN.value,
-                    error=f"injected crash after step {i}",
-                    latency_ms=(time.perf_counter() - started) * 1000,
-                    tokens_in=tokens_in,
-                    tokens_out=tokens_out,
-                    cost_usd=self._cost(tokens_in, tokens_out),
-                    tool_results=tool_results,
-                    metadata={"resumed": resumed, "crashed": True},
-                )
+                # Checkpoint already saved above. Raise so callers must resume
+                # from the store — mirrors a process death more closely than a
+                # cooperative RunOutcome return.
+                err = f"injected crash after step {i}"
                 if self.trace:
                     self.trace.emit(
                         TraceEvent(
                             run_id=rid,
                             event_type=EventType.ERROR,
                             step=i,
-                            error=outcome.error,
+                            error=err,
                             metadata={"injected_crash": True},
                         )
                     )
-                # Do not emit RUN_END as success; still close the run for inspectability
-                self._emit_end(rid, outcome)
-                return outcome
+                raise InjectedCrash(err)
 
             if not result.ok and step.required:
                 outcome = RunOutcome(

@@ -6,7 +6,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
+
+
+class StateCorruptionError(Exception):
+    """Checkpoint exists but cannot be parsed into a valid Checkpoint."""
 
 
 class Checkpoint(BaseModel):
@@ -38,7 +42,13 @@ class StateStore:
         path = self._path(run_id)
         if not path.exists():
             return None
-        return Checkpoint.model_validate_json(path.read_text(encoding="utf-8"))
+        raw = path.read_text(encoding="utf-8")
+        try:
+            return Checkpoint.model_validate_json(raw)
+        except (ValidationError, json.JSONDecodeError, ValueError) as exc:
+            raise StateCorruptionError(
+                f"corrupt checkpoint for run_id={run_id}: {exc}"
+            ) from exc
 
     def clear(self, run_id: str) -> None:
         path = self._path(run_id)

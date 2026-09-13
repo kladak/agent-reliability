@@ -1,4 +1,10 @@
-"""T4: resume after mid-run crash using persisted checkpoints."""
+"""T4: checkpoint-resume simulation via injected mid-run crash.
+
+This is a harness demo, not a real OS process death. The runtime raises
+InjectedCrash after persisting a checkpoint; execute() catches it and
+resumes from the state store on the same ToolRouter (in-memory idempotency
+cache is intentionally shared for this simulation).
+"""
 
 from __future__ import annotations
 
@@ -7,13 +13,15 @@ from typing import Any
 
 from agent_reliability.observe.taxonomy import FailureClass
 from agent_reliability.observe.trace import EventType, read_trace
-from agent_reliability.runtime.mock_agent import RunOutcome, ToolPlanStep
+from agent_reliability.runtime.mock_agent import InjectedCrash, RunOutcome, ToolPlanStep
 from agent_reliability.tasks.base import BaseTask, GradeResult, TaskContext
 
 
 class T4PartialState(BaseTask):
     task_id = "T4_partial_state"
-    description = "Resume after mid-run crash using persisted state"
+    description = (
+        "Checkpoint-resume simulation: InjectedCrash after step 1, then resume from store"
+    )
 
     FINAL_PATH = "final.txt"
     FINAL_CONTENT = "checkpoint-resume-ok\n"
@@ -52,20 +60,18 @@ class T4PartialState(BaseTask):
         if trace_path is not None:
             (ctx.workspace / ".trace_path").write_text(str(trace_path), encoding="utf-8")
 
-        crashed = agent.run(plan, run_id=ctx.run_id, crash_after_step=1)
-        if not crashed.metadata.get("crashed"):
-            crashed.metadata["prior_crash"] = False
-            return crashed
-
-        outcome = agent.run(plan, run_id=ctx.run_id, resume=True)
-        outcome.metadata["prior_crash"] = True
-        store = agent.state_store
-        if store is not None:
-            ckpt = store.load(ctx.run_id)
-            outcome.metadata["checkpoint_after_resume"] = (
-                ckpt.model_dump() if ckpt else None
-            )
-        return outcome
+        try:
+            return agent.run(plan, run_id=ctx.run_id, crash_after_step=1)
+        except InjectedCrash:
+            outcome = agent.run(plan, run_id=ctx.run_id, resume=True)
+            outcome.metadata["prior_crash"] = True
+            store = agent.state_store
+            if store is not None:
+                ckpt = store.load(ctx.run_id)
+                outcome.metadata["checkpoint_after_resume"] = (
+                    ckpt.model_dump() if ckpt else None
+                )
+            return outcome
 
     def grade(self, ctx: TaskContext, outcome: RunOutcome) -> GradeResult:
         checks: list[dict] = []
@@ -85,7 +91,7 @@ class T4PartialState(BaseTask):
             {
                 "name": "resume_metadata",
                 "passed": bool(outcome.metadata.get("resumed"))
-                or bool(outcome.metadata.get("prior_crash")),
+                and bool(outcome.metadata.get("prior_crash")),
             }
         )
 
