@@ -2,12 +2,13 @@
 
 **Owner:** Karim Ladak (`kladak`)  
 **Repo:** https://github.com/kladak/agent-reliability  
-**Status:** Spec locked for v0 implementation  
-**Core question:** *How do we know a tool-using AI agent reliably completes real tasks?*
+**Status:** Spec for harness v0 (implemented on `feat/runtime-v0`)  
+**Core question (north star):** *How do we know a tool-using AI agent reliably completes real tasks?*
+
+> **Honesty (v0):** What ships today is a **deterministic runtime + tool router + trace + grader harness** with a mock/reactive planner — not a trained LLM agent and not proof of general agent quality. T1/T2 use reactive tool loops with derived artifacts; T3–T6 demonstrate router retries, checkpoint-resume **simulation**, policy gating, and budgets. Replay-from-trace regrade, structured-output repair loops, live LLM adapters, and latency p50/p95 are **explicitly out of v0** (tracked as next-slice). CI pins `reports/baseline-offline.json` and fails on pass/fail or failure-class drift.
 
 This is an engineering portfolio system for Applied AI / Forward Deployed / Agent Infrastructure interviews. It is **not** a thin chat wrapper and not a claim of production SLA.
 
----
 
 ## 1. Problem
 
@@ -100,17 +101,18 @@ Every failed run must classify into exactly one primary class:
 1. **Golden fixtures** checked into repo.
 2. **Deterministic graders** preferred (file exists, JSON schema, HTTP mock journal, exact/regex assertions).
 3. **LLM-as-judge** only for open-ended text quality; must record prompt hash/model id; never sole gate for safety tasks.
-4. **Regression**: compare current agent config to a pinned baseline report; CI fails on score drop or new failure classes on golden set.
-5. **Replay**: re-grade from stored traces without re-calling tools when possible.
+4. **Regression**: compare to pinned `reports/baseline-offline.json`; CI fails on pass/fail or failure_class / outcome_failure_class drift.
+5. **Replay**: re-grade from stored traces without re-calling tools — **not in v0**.
 
-## 8. Reliability mechanisms (must demonstrate)
+## 8. Reliability mechanisms (v0 status)
 
-- Per-tool timeouts
-- Bounded retries with jitter + idempotency key for write tools
-- Structured output validation with repair attempt (max 1) then fail typed
-- Checkpointed state for resume tasks
-- Allowlisted tools only (no arbitrary code exec in v0)
-- Cost/latency counters on every run
+- Per-tool timeouts — **present** (thread timeout; cancellation polish later)
+- Bounded retries with jitter + idempotency key for write tools — **present** (in-memory idempotency)
+- Structured output validation with repair attempt (max 1) — **not in v0**
+- Checkpointed state for resume tasks — **present** as InjectedCrash simulation (T4)
+- Allowlisted tools only — **present**
+- Cost/latency counters on every run — **present** (mock token constants; single wall latency, not p50/p95)
+- Replay-from-trace regrade — **not in v0**
 
 ## 9. Config comparison
 
