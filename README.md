@@ -8,7 +8,7 @@ This repo contains an agent runtime, schema-validated tools, trace capture, dete
 
 ## Status
 
-v0 runtime slice on `feat/runtime-v0`: mock agent + tool router + traces + tasks **T1** / **T3** + offline eval runner. Spec remains in [`SPEC.md`](SPEC.md).
+v0 runtime on `feat/runtime-v0`: mock agent + tool router + traces + tasks **T1–T6** + offline eval runner + report compare. Spec: [`SPEC.md`](SPEC.md).
 
 ## Quick start (offline, no API keys)
 
@@ -20,39 +20,47 @@ make eval-offline
 python -m agent_reliability.eval.runner --offline --report reports/latest-offline.json
 ```
 
+Compare two reports (pass/fail + failure_class + measured latency/token deltas only):
+
+```bash
+python -m agent_reliability.eval.runner --compare reports/baseline.json reports/candidate.json
+```
+
 Artifacts:
 
 - `reports/*.json` — pass/fail, latency, tokens, failure class per task
-- `traces/*.jsonl` — structured run events (tool calls, retries, timings)
+- `traces/*.jsonl` — structured run events (tool calls, retries, resume, policy blocks)
 
 ## Package layout
 
 ```text
 agent_reliability/
-  runtime/   # mock agent loop over tool plans
-  tools/     # router + fs_read/fs_write + flaky_echo
-  tasks/     # T1_file_repair, T3_flaky_tool (+ graders)
-  eval/      # offline runner + JSON reports
+  runtime/   # mock agent, state store, policy gate
+  tools/     # router + fs_read/fs_write + flaky_echo + http_get
+  tasks/     # T1–T6 + deterministic graders
+  eval/      # offline runner, JSON reports, compare_reports
   observe/   # TraceEvent JSONL sink + failure taxonomy
 fixtures/    # golden inputs for tasks
 tests/       # pytest (fully offline)
 ```
 
-## Tasks in this slice
+## Task suite
 
 | ID | What it stresses |
 |----|------------------|
 | `T1_file_repair` | Tool use, JSON validation, idempotent overwrite |
+| `T2_api_reconcile` | Mock HTTP fetches, list reconcile, structured report |
 | `T3_flaky_tool` | Retries / recovery against injected transient failures |
-
-Still to come (see SPEC): `T2_api_reconcile`, `T4_partial_state`, `T5_policy_refusal`, `T6_cost_budget`.
+| `T4_partial_state` | Checkpoint crash mid-run + resume |
+| `T5_policy_refusal` | Block unsafe write; `policy_violation`; no side effects |
+| `T6_cost_budget` | Finish under token/cost budget (taxonomy for overage) |
 
 ## Honesty
 
 - No fabricated production deployments, customers, or model accuracy claims.
 - Offline/mock path is first-class so CI does not require paid LLM keys.
-- Metrics in reports are only what the runtime measured (latency, token estimates from `MockAgentConfig`, pass/fail). No invented accuracy scores.
-- LLM-as-judge is optional and labeled when used (not in v0 slice).
+- Metrics in reports are only what the runtime measured (latency, token/cost estimates from `MockAgentConfig`, pass/fail). No invented accuracy scores.
+- LLM-as-judge is optional and labeled when used (not in this slice).
 
 ## Docs
 
