@@ -51,3 +51,32 @@ def test_http_mock_journal(tmp_path: Path) -> None:
     result = router.call("http_get", {"path": "/x"})
     assert result.ok
     assert http.journal == [{"method": "GET", "path": "/x"}]
+
+
+def test_fs_resolve_rejects_parent_escape(tmp_path: Path) -> None:
+    """Sibling-prefix escape (../ws-evil) must raise without relying on PolicyGate."""
+    import pytest
+
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    evil = tmp_path / "ws-evil"
+    evil.mkdir()
+
+    tool = FsWriteTool(workspace)
+    with pytest.raises(PermissionError, match="escapes workspace root"):
+        # Call execute directly — bypasses PolicyGate and router.
+        from agent_reliability.tools.filesystem import FsWriteArgs
+
+        tool.execute(FsWriteArgs(path="../ws-evil/pwned.txt", content="pwned"))
+
+    assert not (evil / "pwned.txt").exists()
+
+
+def test_fs_resolve_rejects_absolute_path(tmp_path: Path) -> None:
+    import pytest
+    from agent_reliability.tools.filesystem import FsReadArgs
+
+    tool = FsReadTool(tmp_path / "ws")
+    (tmp_path / "ws").mkdir()
+    with pytest.raises(PermissionError, match="escapes workspace root"):
+        tool.execute(FsReadArgs(path="/etc/passwd"))
