@@ -63,6 +63,7 @@ class T4PartialState(BaseTask):
 
         if trace_path is not None:
             sink = TraceSink(trace_path)
+            (ctx.workspace / ".trace_path").write_text(str(trace_path), encoding="utf-8")
         else:
             sink = None
 
@@ -86,6 +87,11 @@ class T4PartialState(BaseTask):
         finally:
             if sink is not None:
                 sink.close()
+
+
+    def execute(self, ctx: TaskContext, *, agent, plan, trace_path=None):
+        # Ignore the pre-built agent; we need state_store + crash/resume semantics.
+        return self.run_with_crash_and_resume(ctx, trace_path=trace_path)
 
     def grade(self, ctx: TaskContext, outcome: RunOutcome) -> GradeResult:
         checks: list[dict] = []

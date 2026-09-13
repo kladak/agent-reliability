@@ -8,6 +8,8 @@ from pathlib import Path
 from agent_reliability.observe.taxonomy import FailureClass
 from agent_reliability.runtime.mock_agent import RunOutcome, ToolPlanStep
 from agent_reliability.tasks.base import BaseTask, GradeResult, TaskContext
+from agent_reliability.tools.base import BaseTool
+from agent_reliability.tools.http_mock import MockHttpTool
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "T2_api_reconcile"
 
@@ -40,6 +42,10 @@ class T2ApiReconcile(BaseTask):
 
     def setup(self, ctx: TaskContext) -> None:
         ctx.workspace.mkdir(parents=True, exist_ok=True)
+
+    def extra_tools(self, ctx: TaskContext) -> list[BaseTool]:
+        return [MockHttpTool(self.routes())]
+
 
     def routes(self) -> dict:
         return {
