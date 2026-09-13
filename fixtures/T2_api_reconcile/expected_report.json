@@ -1,0 +1,6 @@
+{
+  "only_in_a": ["sku-1"],
+  "only_in_b": ["sku-4"],
+  "qty_mismatch": [{"id": "sku-3", "qty_a": 7, "qty_b": 5}],
+  "matched": ["sku-2"]
+}

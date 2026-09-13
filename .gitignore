@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+# Keep the pinned CI baseline; ignore ephemeral eval outputs.
+reports/*
+!reports/baseline-offline.json
+traces/
+*.jsonl
+.DS_Store
