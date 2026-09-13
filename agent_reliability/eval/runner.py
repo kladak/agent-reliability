@@ -82,7 +82,14 @@ def run_offline(
                     "task_id": task_id,
                     "run_id": run_id,
                     "passed": grade.passed,
-                    "failure_class": grade.failure_class or outcome.failure_class,
+                    # Top-level failure_class is for failed grades only; runtime class kept separately
+                    # (e.g. T5 correctly refuses with policy_violation but grade passes).
+                    "failure_class": (
+                        None
+                        if grade.passed
+                        else (grade.failure_class or outcome.failure_class)
+                    ),
+                    "outcome_failure_class": outcome.failure_class,
                     "grade_message": grade.message,
                     "checks": grade.checks,
                     "latency_ms": outcome.latency_ms,
