@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_reliability.observe.trace import TraceSink
-from agent_reliability.runtime.mock_agent import MockAgentConfig, MockAgentRuntime
+from agent_reliability.runtime.mock_agent import MockAgentRuntime
+from agent_reliability.runtime.state_store import StateStore
 from agent_reliability.tasks import TASK_REGISTRY, get_task
 from agent_reliability.tasks.base import TaskContext
 from agent_reliability.tools.filesystem import FsReadTool, FsWriteTool
@@ -38,12 +39,12 @@ def run_offline(
     traces_dir = traces_dir or Path("traces")
     traces_dir.mkdir(parents=True, exist_ok=True)
 
-    config = MockAgentConfig(model="mock")
     results: list[dict[str, Any]] = []
     started = time.perf_counter()
 
     for task_id in selected:
         task = get_task(task_id)
+        config = task.agent_config()
         run_id = str(uuid.uuid4())
         with tempfile.TemporaryDirectory(prefix=f"{task_id}-") as tmp:
             workspace = Path(tmp)
@@ -60,11 +61,20 @@ def run_offline(
                     FsReadTool(workspace),
                     FsWriteTool(workspace),
                     FlakyEchoTool(max_retries=5),
+                    *task.extra_tools(ctx),
                 ]
                 router = ToolRouter(tools, trace=sink, run_id=run_id)
-                agent = MockAgentRuntime(router, trace=sink, config=config)
+                agent = MockAgentRuntime(
+                    router,
+                    trace=sink,
+                    config=config,
+                    state_store=StateStore(workspace / "state"),
+                    policy=task.policy(),
+                )
                 plan = task.build_plan(ctx)
-                outcome = agent.run(plan, run_id=run_id)
+                outcome = task.execute(
+                    ctx, agent=agent, plan=plan, trace_path=trace_path
+                )
                 grade = task.grade(ctx, outcome)
 
             results.append(
@@ -82,6 +92,7 @@ def run_offline(
                     "steps_completed": outcome.steps_completed,
                     "trace_path": str(trace_path),
                     "model": config.model,
+                    "config": config.model_dump(),
                 }
             )
 
@@ -90,7 +101,6 @@ def run_offline(
     report: dict[str, Any] = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "mode": "offline",
-        "model": config.model,
         "task_count": len(results),
         "passed": passed,
         "failed": len(results) - passed,
@@ -98,7 +108,10 @@ def run_offline(
         "total_latency_ms": elapsed_ms,
         "results": results,
         # Metrics are only those measured above — no invented scores.
-        "notes": "Deterministic mock-agent eval; cost_usd is estimate from MockAgentConfig.",
+        "notes": (
+            "Deterministic mock-agent eval; cost_usd/tokens come from "
+            "MockAgentConfig counters, not a live bill."
+        ),
     }
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -131,7 +144,23 @@ def main(argv: list[str] | None = None) -> int:
         default=Path("traces"),
         help="Directory for JSONL traces",
     )
+    parser.add_argument(
+        "--compare",
+        nargs=2,
+        metavar=("BASELINE", "CANDIDATE"),
+        help="Compare two existing report JSON files and exit",
+    )
     args = parser.parse_args(argv)
+
+    if args.compare:
+        from agent_reliability.eval.compare import compare_reports, load_report
+
+        baseline = load_report(Path(args.compare[0]))
+        candidate = load_report(Path(args.compare[1]))
+        diff = compare_reports(baseline, candidate)
+        print(json.dumps(diff, indent=2))
+        # Non-zero if regressions detected
+        return 1 if diff.get("regressions") else 0
 
     if not args.offline:
         parser.error("v0 runner requires --offline (live LLM path not implemented yet)")
@@ -141,7 +170,17 @@ def main(argv: list[str] | None = None) -> int:
         report_path=args.report,
         traces_dir=args.traces_dir,
     )
-    print(json.dumps({"passed": report["passed"], "failed": report["failed"], "report": str(args.report or "reports/")}, indent=2))
+    print(
+        json.dumps(
+            {
+                "passed": report["passed"],
+                "failed": report["failed"],
+                "task_count": report["task_count"],
+                "report": str(args.report or "reports/"),
+            },
+            indent=2,
+        )
+    )
     return 0 if report["failed"] == 0 else 1
 
 
