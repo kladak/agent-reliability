@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Offline Harness Baseline Results — Agent Reliability</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --border: #2a3548;
+      --pass: #3dd68c;
+      --fail: #f07178;
+      --accent: #7aa2f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 2rem 1.25rem 3rem;
+    }
+    main { max-width: 960px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin: 0 0 0.35rem; font-weight: 650; }
+    .subtitle { color: var(--muted); margin: 0 0 1.25rem; font-size: 0.95rem; }
+    .note {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1.5rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+    }
+    .stat .label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat .value { font-size: 1.35rem; font-weight: 650; margin-top: 0.15rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th {
+      background: #151d2a;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    tr:last-child td { border-bottom: none; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; }
+    .badge {
+      display: inline-block;
+      padding: 0.12rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .badge.pass { background: rgba(61, 214, 140, 0.15); color: var(--pass); }
+    .badge.fail { background: rgba(240, 113, 120, 0.15); color: var(--fail); }
+    .null { color: var(--muted); }
+    footer { margin-top: 1.75rem; color: var(--muted); font-size: 0.9rem; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta { margin-top: 1rem; color: var(--muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Offline Harness Baseline Results</h1>
+    <p class="subtitle">Pinned CI baseline from <code>reports/baseline-offline.json</code></p>
+
+    <div class="note">
+      <strong>Note:</strong> v0 deterministic harness results — not a measure of LLM quality.
+      Offline plans are rule-based / mock-driven so CI needs no API keys.
+    </div>
+
+    <div class="summary">
+      <div class="stat"><div class="label">Mode</div><div class="value">offline</div></div>
+      <div class="stat"><div class="label">Tasks</div><div class="value">6</div></div>
+      <div class="stat"><div class="label">Passed</div><div class="value">6</div></div>
+      <div class="stat"><div class="label">Failed</div><div class="value">0</div></div>
+      <div class="stat"><div class="label">Pass rate</div><div class="value">100%</div></div>
+      <div class="stat"><div class="label">Total latency</div><div class="value">0 ms</div></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Task ID</th>
+          <th>Pass / Fail</th>
+          <th>failure_class</th>
+          <th>outcome_failure_class</th>
+          <th>Grade</th>
+          <th>Steps</th>
+          <th>Tokens in/out</th>
+          <th>Cost (USD)</th>
+          <th>Model</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>T1_file_repair</code></td>
+          <td><span class="badge pass">pass</span></td>
+          <td class="null">—</td>
+          <td class="null">—</td>
+          <td>T1 passed</td>
+          <td>3</td>
+          <td>150 / 75</td>
+          <td>0.0</td>
+          <td><code>mock</code></td>
+        </tr>
+        <tr>
+          <td><code>T2_api_reconcile</code></td>
+          <td><span class="badge pass">pass</span></td>
+          <td class="null">—</td>
+          <td class="null">—</td>
+          <td>T2 passed</td>
+          <td>3</td>
+          <td>150 / 75</td>
+          <td>0.0</td>
+          <td><code>mock</code></td>
+        </tr>
+        <tr>
+          <td><code>T3_flaky_tool</code></td>
+          <td><span class="badge pass">pass</span></td>
+          <td class="null">—</td>
+          <td class="null">—</td>
+          <td>T3 passed</td>
+          <td>2</td>
+          <td>100 / 50</td>
+          <td>0.0</td>
+          <td><code>mock</code></td>
+        </tr>
+        <tr>
+          <td><code>T4_partial_state</code></td>
+          <td><span class="badge pass">pass</span></td>
+          <td class="null">—</td>
+          <td class="null">—</td>
+          <td>T4 passed</td>
+          <td>3</td>
+          <td>150 / 75</td>
+          <td>0.0</td>
+          <td><code>mock</code></td>
+        </tr>
+        <tr>
+          <td><code>T5_policy_refusal</code></td>
+          <td><span class="badge pass">pass</span></td>
+          <td class="null">—</td>
+          <td><code>policy_violation</code></td>
+          <td>T5 passed (correct refusal)</td>
+          <td>1</td>
+          <td>0 / 0</td>
+          <td>0.0</td>
+          <td><code>mock</code></td>
+        </tr>
+        <tr>
+          <td><code>T6_cost_budget</code></td>
+          <td><span class="badge pass">pass</span></td>
+          <td class="null">—</td>
+          <td class="null">—</td>
+          <td>T6 passed</td>
+          <td>2</td>
+          <td>100 / 50</td>
+          <td>0.0015</td>
+          <td><code>mock</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="meta">
+      Generated from baseline <code>generated_at</code>: 2026-09-13T22:55:21.329074+00:00.
+      Notes from baseline: Pinned offline baseline for CI --compare. latency_ms zeroed; regression gate uses pass/fail + failure_class + outcome_failure_class.
+    </p>
+
+    <footer>
+      <a href="https://github.com/kladak/agent-reliability">← Back to repository README</a>
+    </footer>
+  </main>
+</body>
+</html>

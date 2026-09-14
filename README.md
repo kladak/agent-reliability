@@ -37,6 +37,8 @@ tests/       # pytest (fully offline)
 
 ## Results
 
+Live: [Offline baseline results](https://kladak.github.io/agent-reliability/results.html) (also [`docs/results.html`](docs/results.html) in-repo).
+
 Offline harness baseline ([`docs/results.html`](docs/results.html)) — v0 deterministic harness, not LLM quality. Source: [`reports/baseline-offline.json`](reports/baseline-offline.json) (generated 2026-09-13T22:55:21Z).
 
 | | |
