@@ -12,6 +12,18 @@ Offline plans are rule-based / fixture-shaped so CI needs no API keys. This slic
 
 Spec: [`SPEC.md`](SPEC.md). Branch: `feat/runtime-v0`.
 
+## Harness flow (v0)
+
+```mermaid
+flowchart LR
+  Router[Tool router] --> Trace[Trace sink JSONL]
+  Trace --> Grade[Deterministic graders]
+  Grade --> Report[Eval report JSON]
+  Report --> Compare[Compare vs baseline]
+```
+
+Offline mock path: rule-based planner → allowlisted tools → traces → graders → `reports/baseline-offline.json` regression gate. No fabricated UI.
+
 ## Quick start (offline, no API keys)
 
 ```bash
