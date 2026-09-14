@@ -1,18 +1,20 @@
 # Agent Reliability & Evaluation Platform
 
-**How do we know a tool-using runtime reliably runs tasks with traces, policy, and graders?**
+A reliability harness for tool-using AI systems, built around deterministic task evaluation, structured traces, failure recovery, policy enforcement, and regression gates.
 
-Portfolio harness for Karim Ladak ([github.com/kladak](https://github.com/kladak)) aimed at Applied AI / Forward Deployed / Agent Infrastructure interviews.
+## Capabilities
 
-## Status
+- **Tool execution** — schema-validated router with timeouts, retries, and sandboxed filesystem tools
+- **Structured traces** — JSONL events for tool calls, failures, policy blocks, and resume
+- **Graders** — deterministic task graders (T1–T6) with pass/fail and failure classes
+- **Retries / timeouts** — flaky-tool paths and router-level recovery behavior
+- **State / recovery** — checkpoint store and crash-and-resume simulation
+- **Policy enforcement** — block unsafe writes before side effects
+- **Regression gates** — offline eval reports compared to a pinned baseline in CI
 
-**v0 is a deterministic runtime + grader harness**, not a trained LLM agent.
+Spec: [`SPEC.md`](SPEC.md).
 
-Offline plans are rule-based / fixture-shaped so CI needs no API keys. This slice measures the harness — tool router, traces, failure taxonomy, filesystem sandbox, policy gate, checkpoint resume simulation, budget counters, and deterministic graders — **not** model or agent quality. A live planner is a later adapter behind the same router/trace/grade interfaces.
-
-Spec: [`SPEC.md`](SPEC.md). Branch: `feat/runtime-v0`.
-
-## Harness flow (v0)
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -22,7 +24,16 @@ flowchart LR
   Report --> Compare[Compare vs baseline]
 ```
 
-Offline mock path: rule-based planner → allowlisted tools → traces → graders → `reports/baseline-offline.json` regression gate. No fabricated UI.
+```text
+agent_reliability/
+  runtime/   # planner loop, state store, policy gate
+  tools/     # router + fs_read/fs_write (sandboxed) + flaky_echo + http_get
+  tasks/     # T1–T6 + deterministic graders
+  eval/      # offline runner, JSON reports, compare_reports
+  observe/   # TraceEvent JSONL sink + failure taxonomy
+fixtures/    # golden inputs for tasks
+tests/       # pytest (fully offline)
+```
 
 ## Quick start (offline, no API keys)
 
@@ -38,41 +49,30 @@ python -m agent_reliability.eval.runner --compare reports/baseline-offline.json 
 
 Artifacts:
 
-- `reports/baseline-offline.json` — **pinned** CI baseline (pass/fail + failure classes; latency zeroed)
+- `reports/baseline-offline.json` — pinned CI baseline (pass/fail + failure classes; latency zeroed)
 - `reports/*.json` — eval outputs (gitignored except the baseline)
 - `traces/*.jsonl` — structured run events (tool calls, retries, resume, policy blocks)
 
-## Package layout
-
-```text
-agent_reliability/
-  runtime/   # mock agent (+ reactive planner loop), state store, policy gate
-  tools/     # router + fs_read/fs_write (sandboxed) + flaky_echo + http_get
-  tasks/     # T1–T6 + deterministic graders
-  eval/      # offline runner, JSON reports, compare_reports
-  observe/   # TraceEvent JSONL sink + failure taxonomy
-fixtures/    # golden inputs for tasks
-tests/       # pytest (fully offline)
-```
-
 ## Task suite
 
-| ID | What it stresses | What it is / is not |
-|----|------------------|---------------------|
-| `T1_file_repair` | fs_read → repair broken JSON → idempotent fs_write | Rule-based repair from tool output (not a copy of `expected_*.json`) |
+| ID | What it stresses | Notes |
+|----|------------------|-------|
+| `T1_file_repair` | fs_read → repair broken JSON → idempotent fs_write | Rule-based repair from tool output |
 | `T2_api_reconcile` | http_get ×2 → reconcile bodies → write report | Report derived from HTTP tool results |
-| `T3_flaky_tool` | Retries against injected transient failures | Fair as a **router** test |
-| `T4_partial_state` | Checkpoint + `InjectedCrash` + resume from store | **Simulation** (exception after save), not OS process death |
-| `T5_policy_refusal` | Block unsafe write before side effects | **Guardrail** unit path; scripted unsafe step, not model refusal |
+| `T3_flaky_tool` | Retries against injected transient failures | Router retry path |
+| `T4_partial_state` | Checkpoint + `InjectedCrash` + resume from store | Simulation (exception after save), not OS process death |
+| `T5_policy_refusal` | Block unsafe write before side effects | Guardrail path; scripted unsafe step |
 | `T6_cost_budget` | Finish under token/cost budget counters | Mock token accrual (`tokens_per_step`), not a real bill |
 
-## Honesty
+## Scope & limitations
 
-- No fabricated production deployments, customers, or model accuracy claims.
-- The “agent” in v0 is a **scripted / rule-based mock** that drives allowlisted tools. It is a reliability harness with tools, traces, and graders — not evidence that an LLM completes real tasks.
-- Offline/mock path is first-class so CI does not require paid LLM keys.
-- Metrics in reports are only what the runtime measured (latency, token/cost estimates from `MockAgentConfig`, pass/fail, failure class). No invented accuracy scores.
-- CI runs unit tests + offline eval + `--compare` against the pinned baseline (score drop or new/changed `failure_class` / `outcome_failure_class` fails the job).
+v0 is a **deterministic runtime + grader harness**, not a trained LLM agent and not a measure of model quality.
+
+- Offline plans are rule-based / fixture-shaped so CI needs no API keys. A live planner is a later adapter behind the same router/trace/grade interfaces.
+- The “agent” in v0 is a scripted / rule-based mock that drives allowlisted tools — evidence about harness reliability, not that an LLM completes real tasks.
+- Budget counters use mock token accrual; they are not production billing.
+- Report metrics are only what the runtime measured (latency, mock token/cost estimates, pass/fail, failure class).
+- CI runs unit tests + offline eval + `--compare` against the pinned baseline (score drop or new/changed failure classes fail the job).
 - LLM-as-judge is optional and labeled when used (not in this slice).
 
 ## Docs
