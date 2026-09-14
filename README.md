@@ -35,6 +35,28 @@ fixtures/    # golden inputs for tasks
 tests/       # pytest (fully offline)
 ```
 
+## Results
+
+Offline harness baseline ([`docs/results.html`](docs/results.html)) — v0 deterministic harness, not LLM quality. Source: [`reports/baseline-offline.json`](reports/baseline-offline.json) (generated 2026-09-13T22:55:21Z).
+
+| | |
+|--|--|
+| Mode | offline |
+| Tasks | 6 |
+| Passed / Failed | 6 / 0 |
+| Pass rate | 100% |
+
+| Task ID | Result | failure_class | outcome_failure_class |
+|---------|--------|---------------|------------------------|
+| `T1_file_repair` | pass | — | — |
+| `T2_api_reconcile` | pass | — | — |
+| `T3_flaky_tool` | pass | — | — |
+| `T4_partial_state` | pass | — | — |
+| `T5_policy_refusal` | pass | — | `policy_violation` |
+| `T6_cost_budget` | pass | — | — |
+
+Also: [`docs/results.md`](docs/results.md).
+
 ## Quick start (offline, no API keys)
 
 ```bash
@@ -79,3 +101,5 @@ v0 is a **deterministic runtime + grader harness**, not a trained LLM agent and 
 
 - [SPEC.md](SPEC.md) — problem, architecture, tasks, methodology, success criteria
 - [adr/0001-mock-first-evals.md](adr/0001-mock-first-evals.md) — why mock-first CI
+- [docs/results.html](docs/results.html) — offline harness baseline results (static)
+- [docs/results.md](docs/results.md) — same baseline as a markdown table
