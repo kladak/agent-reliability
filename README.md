@@ -4,10 +4,10 @@ A reliability harness for tool-using AI systems, built around deterministic task
 
 ## Capabilities
 
-- **Tool execution**: schema-validated router with timeouts, retries, and sandboxed filesystem tools
+- **Tool execution**: schema-validated router with timeout classification, retries, and sandboxed filesystem tools
 - **Structured traces**: JSONL events for tool calls, failures, policy blocks, and resume
 - **Graders**: deterministic task graders (T1-T6) with pass/fail and failure classes
-- **Retries and timeouts**: flaky-tool paths and router-level recovery behavior
+- **Retries and timeout classification**: flaky-tool paths and router-level reporting and recovery
 - **State and recovery**: checkpoint store and crash-and-resume simulation
 - **Policy enforcement**: block unsafe writes before side effects
 - **Regression gates**: offline eval reports compared to a pinned baseline in CI
@@ -114,7 +114,6 @@ v0 is a deterministic runtime and grader harness driven by a scripted planner.
 - Budget counters use mock token accrual (`tokens_per_step`).
 - Report metrics are only what the runtime measured (latency, mock token/cost estimates, pass/fail, failure class).
 - CI runs unit tests + offline eval + `--compare` against the pinned baseline (score drop or new/changed failure classes fail the job).
-- LLM-as-judge is available for open-ended text and is labeled in the report when used. It is unused in this slice.
 
 ## Docs
 

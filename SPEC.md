@@ -98,13 +98,13 @@ Every failed run must classify into exactly one primary class:
 
 1. **Golden fixtures** checked into repo.
 2. **Deterministic graders** preferred (file exists, JSON schema, HTTP mock journal, exact/regex assertions).
-3. **LLM-as-judge** only for open-ended text quality; must record prompt hash/model id; never sole gate for safety tasks.
+3. Open-ended text quality grading is outside v0; current graders are deterministic.
 4. **Regression**: compare to pinned `reports/baseline-offline.json`; CI fails on pass/fail or failure_class / outcome_failure_class drift.
 5. **Replay**: re-grade from stored traces without re-calling tools. Not in v0.
 
 ## 8. Reliability mechanisms (v0 status)
 
-- Per-tool timeouts: **present** (thread timeout; cancellation polish later)
+- Per-tool timeout classification: **present** (deadline detection is recorded; workers are not hard-cancelled)
 - Bounded retries with jitter plus an idempotency key for write tools: **present** (in-memory idempotency)
 - Structured output validation with one repair attempt: **not in v0**
 - Checkpointed state for resume tasks: **present** as InjectedCrash simulation (T4)
