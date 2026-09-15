@@ -64,7 +64,7 @@ def test_fs_resolve_rejects_parent_escape(tmp_path: Path) -> None:
 
     tool = FsWriteTool(workspace)
     with pytest.raises(PermissionError, match="escapes workspace root"):
-        # Call execute directly — bypasses PolicyGate and router.
+        # Call execute directly, bypassing PolicyGate and the router.
         from agent_reliability.tools.filesystem import FsWriteArgs
 
         tool.execute(FsWriteArgs(path="../ws-evil/pwned.txt", content="pwned"))

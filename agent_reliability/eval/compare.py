@@ -18,7 +18,7 @@ def _norm_class(value: Any) -> str | None:
 
 
 def compare_reports(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
-    """Diff pass/fail and failure classes only — no invented scores.
+    """Diff pass/fail and failure classes only. No derived or invented scores.
 
     regressions: tasks that passed in baseline but failed in candidate,
     tasks missing from the candidate, or tasks whose failure_class /

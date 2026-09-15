@@ -22,7 +22,7 @@ class FsWriteArgs(BaseModel):
 def _resolve(root: Path, rel: str) -> Path:
     """Resolve rel under root; reject escapes via .. or absolute paths."""
     root_resolved = root.resolve()
-    # Disallow absolute inputs — they must be relative to the workspace.
+    # Disallow absolute inputs; paths must be relative to the workspace.
     rel_path = Path(rel)
     if rel_path.is_absolute():
         raise PermissionError(f"path escapes workspace root: {rel}")

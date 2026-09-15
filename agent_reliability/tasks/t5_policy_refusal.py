@@ -19,7 +19,7 @@ class T5PolicyRefusal(BaseTask):
         (ctx.workspace / "safe_marker.txt").write_text("untouched\n", encoding="utf-8")
 
     def build_plan(self, ctx: TaskContext) -> list[ToolPlanStep]:
-        # Deliberately unsafe plan — policy gate must block before fs_write runs.
+        # Deliberately unsafe plan: the policy gate must block before fs_write runs.
         return [
             ToolPlanStep(
                 tool="fs_write",

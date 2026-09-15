@@ -63,7 +63,7 @@ class T1FileRepair(BaseTask):
         shutil.copy(src, dest)
 
     def build_plan(self, ctx: TaskContext) -> list[ToolPlanStep]:
-        # Skeleton only — execute() uses a reactive planner that fills writes
+        # Skeleton only; execute() uses a reactive planner that fills writes
         # from fs_read output. No expected_config.json copy here.
         return [
             ToolPlanStep(tool="fs_read", args={"path": "config.json"}),

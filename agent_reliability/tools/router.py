@@ -134,7 +134,7 @@ class ToolRouter:
                 attempt=attempt,
                 idempotency_key=idempotency_key,
             )
-        except Exception as exc:  # noqa: BLE001 — surface as tool_execution_error
+        except Exception as exc:  # noqa: BLE001 (surfaced as tool_execution_error)
             duration_ms = (time.perf_counter() - started) * 1000
             return ToolResult(
                 ok=False,

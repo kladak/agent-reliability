@@ -67,7 +67,7 @@ class T2ApiReconcile(BaseTask):
         }
 
     def build_plan(self, ctx: TaskContext) -> list[ToolPlanStep]:
-        # Skeleton — report content is derived in execute from http_get bodies.
+        # Skeleton; report content is derived in execute from http_get bodies.
         return [
             ToolPlanStep(tool="http_get", args={"path": "/inventory/a"}),
             ToolPlanStep(tool="http_get", args={"path": "/inventory/b"}),

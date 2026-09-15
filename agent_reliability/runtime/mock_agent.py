@@ -51,7 +51,7 @@ class RunOutcome(BaseModel):
 class InjectedCrash(Exception):
     """Stand-in for a mid-run process death after a checkpoint was saved.
 
-    T4 catches this and resumes from the state store — not a cooperative
+    T4 catches this and resumes from the state store. It is not a cooperative
     RunOutcome return on the happy path.
     """
 
@@ -286,7 +286,7 @@ class MockAgentRuntime:
 
             if crash_after_step is not None and i >= crash_after_step:
                 # Checkpoint already saved above. Raise so callers must resume
-                # from the store — mirrors a process death more closely than a
+                # from the store, which mirrors a process death more closely than a
                 # cooperative RunOutcome return.
                 err = f"injected crash after step {i}"
                 if self.trace:

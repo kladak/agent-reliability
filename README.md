@@ -4,13 +4,13 @@ A reliability harness for tool-using AI systems, built around deterministic task
 
 ## Capabilities
 
-- **Tool execution** — schema-validated router with timeouts, retries, and sandboxed filesystem tools
-- **Structured traces** — JSONL events for tool calls, failures, policy blocks, and resume
-- **Graders** — deterministic task graders (T1–T6) with pass/fail and failure classes
-- **Retries / timeouts** — flaky-tool paths and router-level recovery behavior
-- **State / recovery** — checkpoint store and crash-and-resume simulation
-- **Policy enforcement** — block unsafe writes before side effects
-- **Regression gates** — offline eval reports compared to a pinned baseline in CI
+- **Tool execution**: schema-validated router with timeouts, retries, and sandboxed filesystem tools
+- **Structured traces**: JSONL events for tool calls, failures, policy blocks, and resume
+- **Graders**: deterministic task graders (T1-T6) with pass/fail and failure classes
+- **Retries and timeouts**: flaky-tool paths and router-level recovery behavior
+- **State and recovery**: checkpoint store and crash-and-resume simulation
+- **Policy enforcement**: block unsafe writes before side effects
+- **Regression gates**: offline eval reports compared to a pinned baseline in CI
 
 Spec: [`SPEC.md`](SPEC.md).
 
@@ -35,12 +35,28 @@ fixtures/    # golden inputs for tasks
 tests/       # pytest (fully offline)
 ```
 
+## Regression gate
+
+[`eval/compare.py`](agent_reliability/eval/compare.py) diffs a candidate report against the
+pinned baseline and flags a task on three conditions: it passed before and fails now, it
+disappears from the candidate, or its `failure_class` / `outcome_failure_class` changes
+while it still passes. The third condition catches a task that keeps passing for a
+different reason, which means the behaviour under test moved. Latency and token deltas are
+reported for information. CI runs this on every push and fails the job on any of the three.
+
+```bash
+make eval-offline     # writes reports/latest-offline.json
+make eval-compare     # diffs it against reports/baseline-offline.json
+```
+
 ## Results
 
-**Live report:** [https://kladak.github.io/agent-reliability/results.html](https://kladak.github.io/agent-reliability/results.html)  
-(Repo: [`docs/results.html`](docs/results.html); [htmlpreview fallback](https://htmlpreview.github.io/?https://github.com/kladak/agent-reliability/blob/main/docs/results.html))
+Rendered report: [kladak.github.io/agent-reliability/results.html](https://kladak.github.io/agent-reliability/results.html)
+(source: [`reports/baseline-offline.json`](reports/baseline-offline.json), generated
+2026-09-13T22:55:21Z).
 
-Offline harness baseline — v0 deterministic harness, not LLM quality. Source: [`reports/baseline-offline.json`](reports/baseline-offline.json) (generated 2026-09-13T22:55:21Z).
+These are fixture-driven graders running against a scripted planner, so 6/6 means the
+harness matches the pinned baseline.
 
 | | |
 |--|--|
@@ -51,12 +67,12 @@ Offline harness baseline — v0 deterministic harness, not LLM quality. Source: 
 
 | Task ID | Result | failure_class | outcome_failure_class |
 |---------|--------|---------------|------------------------|
-| `T1_file_repair` | pass | — | — |
-| `T2_api_reconcile` | pass | — | — |
-| `T3_flaky_tool` | pass | — | — |
-| `T4_partial_state` | pass | — | — |
-| `T5_policy_refusal` | pass | — | `policy_violation` |
-| `T6_cost_budget` | pass | — | — |
+| `T1_file_repair` | pass | none | none |
+| `T2_api_reconcile` | pass | none | none |
+| `T3_flaky_tool` | pass | none | none |
+| `T4_partial_state` | pass | none | none |
+| `T5_policy_refusal` | pass | none | `policy_violation` |
+| `T6_cost_budget` | pass | none | none |
 
 Also: [`docs/results.md`](docs/results.md).
 
@@ -74,9 +90,9 @@ python -m agent_reliability.eval.runner --compare reports/baseline-offline.json 
 
 Artifacts:
 
-- `reports/baseline-offline.json` — pinned CI baseline (pass/fail + failure classes; latency zeroed)
-- `reports/*.json` — eval outputs (gitignored except the baseline)
-- `traces/*.jsonl` — structured run events (tool calls, retries, resume, policy blocks)
+- `reports/baseline-offline.json`: pinned CI baseline (pass/fail plus failure classes; latency zeroed)
+- `reports/*.json`: eval outputs (gitignored except the baseline)
+- `traces/*.jsonl`: structured run events (tool calls, retries, resume, policy blocks)
 
 ## Task suite
 
@@ -85,24 +101,24 @@ Artifacts:
 | `T1_file_repair` | fs_read → repair broken JSON → idempotent fs_write | Rule-based repair from tool output |
 | `T2_api_reconcile` | http_get ×2 → reconcile bodies → write report | Report derived from HTTP tool results |
 | `T3_flaky_tool` | Retries against injected transient failures | Router retry path |
-| `T4_partial_state` | Checkpoint + `InjectedCrash` + resume from store | Simulation (exception after save), not OS process death |
+| `T4_partial_state` | Checkpoint, `InjectedCrash`, resume from store | Raises after the checkpoint save, simulating a mid-run death |
 | `T5_policy_refusal` | Block unsafe write before side effects | Guardrail path; scripted unsafe step |
-| `T6_cost_budget` | Finish under token/cost budget counters | Mock token accrual (`tokens_per_step`), not a real bill |
+| `T6_cost_budget` | Finish under token and cost budget counters | Mock token accrual via `tokens_per_step` |
 
 ## Scope & limitations
 
-v0 is a **deterministic runtime + grader harness**, not a trained LLM agent and not a measure of model quality.
+v0 is a deterministic runtime and grader harness driven by a scripted planner.
 
 - Offline plans are rule-based / fixture-shaped so CI needs no API keys. A live planner is a later adapter behind the same router/trace/grade interfaces.
-- The “agent” in v0 is a scripted / rule-based mock that drives allowlisted tools — evidence about harness reliability, not that an LLM completes real tasks.
-- Budget counters use mock token accrual; they are not production billing.
+- The planner in v0 is a rule-based mock that drives allowlisted tools, so the results describe harness behaviour.
+- Budget counters use mock token accrual (`tokens_per_step`).
 - Report metrics are only what the runtime measured (latency, mock token/cost estimates, pass/fail, failure class).
 - CI runs unit tests + offline eval + `--compare` against the pinned baseline (score drop or new/changed failure classes fail the job).
-- LLM-as-judge is optional and labeled when used (not in this slice).
+- LLM-as-judge is available for open-ended text and is labeled in the report when used. It is unused in this slice.
 
 ## Docs
 
-- [SPEC.md](SPEC.md) — problem, architecture, tasks, methodology, success criteria
-- [adr/0001-mock-first-evals.md](adr/0001-mock-first-evals.md) — why mock-first CI
-- [docs/results.html](docs/results.html) — offline harness baseline results (static)
-- [docs/results.md](docs/results.md) — same baseline as a markdown table
+- [SPEC.md](SPEC.md): problem, architecture, tasks, methodology, acceptance criteria
+- [adr/0001-mock-first-evals.md](adr/0001-mock-first-evals.md): why CI runs mock-first
+- [docs/results.html](docs/results.html): offline baseline results as a static page
+- [docs/results.md](docs/results.md): the same baseline as a markdown table

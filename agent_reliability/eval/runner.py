@@ -114,7 +114,7 @@ def run_offline(
         "pass_rate": (passed / len(results)) if results else 0.0,
         "total_latency_ms": elapsed_ms,
         "results": results,
-        # Metrics are only those measured above — no invented scores.
+        # Only the metrics measured above; nothing is derived or estimated.
         "notes": (
             "Deterministic mock-agent eval; cost_usd/tokens come from "
             "MockAgentConfig counters, not a live bill."
